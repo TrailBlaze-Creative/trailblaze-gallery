@@ -3,7 +3,7 @@
  * Plugin Name: Trailblaze Gallery
  * Plugin URI: https://trailblazecreative.com
  * Description: Custom photo gallery plugin with ACF integration, carousel navigation, and lightbox functionality.
- * Version: 1.1.1
+ * Version: 1.2.0
  * Author: Trailblaze Creative
  * Author URI: https://trailblazecreative.com
  * License: GPL-2.0+
@@ -19,12 +19,9 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('TBG_VERSION', '1.1.1');
+define('TBG_VERSION', '1.2.0');
 define('TBG_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TBG_PLUGIN_URL', plugin_dir_url(__FILE__));
-
-// Include migration tool
-require_once TBG_PLUGIN_DIR . 'includes/migration.php';
 
 // Include Plugin Update Checker
 require_once TBG_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php';
@@ -103,8 +100,18 @@ class Trailblaze_Gallery {
                             'label' => 'Gallery Title',
                             'name' => 'gallery_title',
                             'type' => 'text',
-                            'instructions' => 'Display title shown above the gallery (e.g., "Day 1 - Ballroom")',
+                            'instructions' => 'Internal name for this gallery (e.g., "Day 1 - Ballroom")',
                             'required' => 1,
+                        ),
+                        array(
+                            'key' => 'field_tbg_show_title',
+                            'label' => 'Show Title',
+                            'name' => 'show_title',
+                            'type' => 'true_false',
+                            'instructions' => 'Display the gallery title above the images',
+                            'required' => 0,
+                            'default_value' => 0,
+                            'ui' => 1,
                         ),
                         array(
                             'key' => 'field_tbg_gallery_id',
@@ -235,7 +242,6 @@ class Trailblaze_Gallery {
             'gallery_index' => 0,
             'columns' => 3,
             'per_page' => 12,
-            'show_title' => 'true',
         ), $atts, 'tbg_gallery');
 
         if (!function_exists('get_field')) {
@@ -282,7 +288,7 @@ class Trailblaze_Gallery {
         ?>
         <div id="<?php echo esc_attr($anchor_id); ?>" class="tbg-gallery-wrapper" data-gallery-id="<?php echo esc_attr($unique_id); ?>" data-per-page="<?php echo esc_attr($per_page); ?>" data-columns="<?php echo esc_attr($columns); ?>">
 
-            <?php if ($atts['show_title'] === 'true' && !empty($gallery['gallery_title'])) : ?>
+            <?php if (!empty($gallery['show_title']) && !empty($gallery['gallery_title'])) : ?>
                 <h4 class="tbg-gallery-title"><?php echo esc_html($gallery['gallery_title']); ?></h4>
             <?php endif; ?>
 
