@@ -31,7 +31,7 @@ require_once TBG_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checke
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $tbgUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/TrailblazeCreative/trailblaze-gallery/',
+    'https://github.com/TrailBlaze-Creative/trailblaze-gallery/',
     __FILE__,
     'trailblaze-gallery'
 );
