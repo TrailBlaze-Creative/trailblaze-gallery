@@ -87,11 +87,26 @@ class Trailblaze_Gallery {
             'title' => 'Photo Galleries',
             'fields' => array(
                 array(
+                    'key' => 'field_tbg_shortcode_instructions',
+                    'label' => '',
+                    'name' => '',
+                    'type' => 'message',
+                    'message' => '<div style="background: #f0f6fc; border-left: 4px solid #2271b1; padding: 12px 15px; margin: -5px 0 15px;">
+                        <strong style="font-size: 14px;">📋 How to Use Shortcodes</strong><br><br>
+                        After creating a gallery below, copy the shortcode and paste it into your page content where you want the gallery to appear.<br><br>
+                        <strong>Shortcode Format:</strong> <code>[tbg_gallery id="your-gallery-id"]</code><br><br>
+                        <strong>Example:</strong> If your Gallery ID is <code>ballroom1</code>, use: <code>[tbg_gallery id="ballroom1"]</code><br><br>
+                        <strong>Anchor Links:</strong> You can link directly to a gallery using <code>#your-gallery-id</code> (e.g., <code>yoursite.com/photos/#ballroom1</code>)
+                    </div>',
+                    'new_lines' => '',
+                    'esc_html' => 0,
+                ),
+                array(
                     'key' => 'field_tbg_galleries_repeater',
                     'label' => 'Galleries',
                     'name' => 'tbg_galleries',
                     'type' => 'repeater',
-                    'instructions' => 'Add multiple photo galleries. Each gallery will generate a unique shortcode.',
+                    'instructions' => '',
                     'required' => 0,
                     'min' => 0,
                     'max' => 0,
@@ -103,16 +118,28 @@ class Trailblaze_Gallery {
                             'label' => 'Gallery Title',
                             'name' => 'gallery_title',
                             'type' => 'text',
-                            'instructions' => 'Enter a title for this gallery section (e.g., "Day 1 - Ballroom")',
+                            'instructions' => 'Display title shown above the gallery (e.g., "Day 1 - Ballroom")',
                             'required' => 1,
                         ),
                         array(
                             'key' => 'field_tbg_gallery_id',
-                            'label' => 'Gallery ID/Anchor',
+                            'label' => 'Gallery ID',
                             'name' => 'gallery_id',
                             'type' => 'text',
-                            'instructions' => 'Unique ID for anchor links (e.g., "ballroom1"). No spaces or special characters.',
+                            'instructions' => '<strong>⚡ This creates your shortcode!</strong> Enter a unique ID using only letters, numbers, and hyphens (e.g., "ballroom1" or "day-2-breakout").<br>Your shortcode will be: <code>[tbg_gallery id="<em>your-id-here</em>"]</code>',
                             'required' => 1,
+                        ),
+                        array(
+                            'key' => 'field_tbg_shortcode_display',
+                            'label' => 'Your Shortcode',
+                            'name' => '',
+                            'type' => 'message',
+                            'message' => '<div style="background: #f6f7f7; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace;">
+                                Copy this shortcode after entering your Gallery ID above ☝️<br>
+                                <strong style="color: #2271b1;">[tbg_gallery id="YOUR-GALLERY-ID"]</strong>
+                            </div>',
+                            'new_lines' => '',
+                            'esc_html' => 0,
                         ),
                         array(
                             'key' => 'field_tbg_gallery_images',
