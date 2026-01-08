@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Logs
+*.log
+
+# Local development
+.env
+*.local
+
+# Node (if added later)
+node_modules/
+
+# Composer (if added later)
+/vendor/*
+!/vendor/plugin-update-checker/

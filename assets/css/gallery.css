@@ -1,0 +1,588 @@
+/**
+ * Trailblaze Gallery Styles
+ * Matching the design of Photo Gallery by 10Web
+ */
+
+/* ========================================
+   Gallery Container
+   ======================================== */
+
+.tbg-gallery-wrapper {
+    margin: 20px 0 40px;
+    scroll-margin-top: 100px;
+}
+
+.tbg-gallery-title {
+    margin: 0 0 15px;
+    padding: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    text-transform: uppercase;
+}
+
+.tbg-gallery-container {
+    position: relative;
+}
+
+/* ========================================
+   Gallery Grid
+   ======================================== */
+
+.tbg-gallery-grid {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.tbg-gallery-grid.columns-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.tbg-gallery-grid.columns-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.tbg-gallery-grid.columns-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* Responsive grid */
+@media (max-width: 768px) {
+    .tbg-gallery-grid.columns-3,
+    .tbg-gallery-grid.columns-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .tbg-gallery-grid.columns-2,
+    .tbg-gallery-grid.columns-3,
+    .tbg-gallery-grid.columns-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========================================
+   Gallery Items
+   ======================================== */
+
+.tbg-gallery-item {
+    display: none;
+    overflow: hidden;
+    background: #f0f0f0;
+    aspect-ratio: 4/3;
+}
+
+.tbg-gallery-item.visible {
+    display: block;
+}
+
+.tbg-gallery-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.tbg-gallery-link img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.tbg-gallery-link:hover img {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* ========================================
+   Pagination / Carousel Navigation
+   ======================================== */
+
+.tbg-gallery-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.tbg-pagination-nav {
+    display: flex;
+    gap: 2px;
+}
+
+.tbg-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #555;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.tbg-nav-btn:hover:not(:disabled) {
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #333;
+}
+
+.tbg-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tbg-pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: #555;
+}
+
+.tbg-current-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+    font-size: 14px;
+}
+
+/* ========================================
+   Lightbox Overlay
+   ======================================== */
+
+.tbg-lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.tbg-lightbox-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ========================================
+   Lightbox Close Button
+   ======================================== */
+
+.tbg-lightbox-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.tbg-lightbox-close:hover {
+    opacity: 1;
+}
+
+/* ========================================
+   Lightbox Main Image Area
+   ======================================== */
+
+.tbg-lightbox-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 60px 60px 20px;
+    overflow: hidden;
+}
+
+.tbg-lightbox-image-container {
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tbg-lightbox-image {
+    max-width: 100%;
+    max-height: calc(100vh - 200px);
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tbg-lightbox-image.loaded {
+    opacity: 1;
+}
+
+/* ========================================
+   Lightbox Navigation Arrows
+   ======================================== */
+
+.tbg-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 48px;
+    font-weight: 200;
+    cursor: pointer;
+    z-index: 5;
+    transition: color 0.2s ease;
+    padding: 0;
+}
+
+.tbg-lightbox-nav:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+.tbg-lightbox-prev {
+    left: 10px;
+}
+
+.tbg-lightbox-next {
+    right: 10px;
+}
+
+/* ========================================
+   Lightbox Controls Bar
+   ======================================== */
+
+.tbg-lightbox-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0;
+    background: rgba(60, 60, 60, 0.9);
+}
+
+.tbg-lightbox-control-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.tbg-lightbox-control-btn:hover {
+    color: #fff;
+}
+
+.tbg-lightbox-control-btn.active {
+    color: #4a90d9;
+}
+
+.tbg-lightbox-control-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Share buttons */
+.tbg-lightbox-share-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.tbg-lightbox-share-btn:hover {
+    color: #fff;
+}
+
+/* Toggle thumbnails arrow */
+.tbg-toggle-thumbs {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 20px;
+    background: rgba(60, 60, 60, 0.9);
+    border: none;
+    border-radius: 5px 5px 0 0;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.tbg-toggle-thumbs:hover {
+    color: #fff;
+}
+
+/* ========================================
+   Lightbox Thumbnails Strip
+   ======================================== */
+
+.tbg-lightbox-footer {
+    position: relative;
+    background: rgba(60, 60, 60, 0.9);
+    padding: 0;
+}
+
+.tbg-lightbox-thumbs-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.tbg-lightbox-thumbs {
+    display: flex;
+    gap: 3px;
+    padding: 8px 50px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+
+.tbg-lightbox-thumbs::-webkit-scrollbar {
+    height: 6px;
+}
+
+.tbg-lightbox-thumbs::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tbg-lightbox-thumbs::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+
+.tbg-lightbox-thumb {
+    flex-shrink: 0;
+    width: 70px;
+    height: 50px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.tbg-lightbox-thumb:hover {
+    opacity: 0.8;
+}
+
+.tbg-lightbox-thumb.active {
+    opacity: 1;
+    border-color: #4a90d9;
+}
+
+.tbg-lightbox-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Thumbnail scroll buttons */
+.tbg-thumbs-scroll {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    z-index: 2;
+    font-size: 20px;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.tbg-thumbs-scroll:hover {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.tbg-thumbs-scroll-left {
+    left: 0;
+}
+
+.tbg-thumbs-scroll-right {
+    right: 0;
+}
+
+/* ========================================
+   Lightbox Loading State
+   ======================================== */
+
+.tbg-lightbox-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: tbg-spin 1s linear infinite;
+}
+
+@keyframes tbg-spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+/* ========================================
+   Fullscreen Mode
+   ======================================== */
+
+.tbg-lightbox-overlay.fullscreen {
+    background: #000;
+}
+
+.tbg-lightbox-overlay.fullscreen .tbg-lightbox-image {
+    max-height: calc(100vh - 150px);
+}
+
+/* ========================================
+   Slideshow Playing State
+   ======================================== */
+
+.tbg-lightbox-overlay.slideshow-playing .tbg-lightbox-control-btn[data-action="play"] {
+    color: #4a90d9;
+}
+
+/* ========================================
+   Responsive Adjustments
+   ======================================== */
+
+@media (max-width: 768px) {
+    .tbg-lightbox-content {
+        padding: 50px 40px 20px;
+    }
+
+    .tbg-lightbox-nav {
+        width: 40px;
+        font-size: 36px;
+    }
+
+    .tbg-lightbox-prev {
+        left: 0;
+    }
+
+    .tbg-lightbox-next {
+        right: 0;
+    }
+
+    .tbg-lightbox-thumb {
+        width: 50px;
+        height: 36px;
+    }
+
+    .tbg-lightbox-thumbs {
+        padding: 8px 40px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tbg-lightbox-content {
+        padding: 50px 10px 10px;
+    }
+
+    .tbg-lightbox-controls {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+}
+
+/* ========================================
+   Hidden Thumbnails State
+   ======================================== */
+
+.tbg-lightbox-footer.hidden-thumbs .tbg-lightbox-thumbs-container {
+    display: none;
+}
+
+.tbg-lightbox-footer.hidden-thumbs .tbg-toggle-thumbs {
+    transform: translateX(-50%) rotate(180deg);
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+    .tbg-lightbox-overlay {
+        display: none !important;
+    }
+
+    .tbg-gallery-item {
+        display: block !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .tbg-gallery-pagination {
+        display: none !important;
+    }
+}
