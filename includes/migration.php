@@ -1,9 +1,7 @@
 <?php
 /**
  * Migration script for importing data from Photo Gallery by 10Web (BWG)
- *
- * Usage: Add ?tbg_migrate=1 to any admin page URL while logged in as admin
- * Example: /wp-admin/?tbg_migrate=1
+ * Uses AJAX batch processing to avoid timeouts
  */
 
 // Prevent direct access
@@ -16,12 +14,38 @@ if (!defined('ABSPATH')) {
  */
 class TBG_Migration {
 
+    const BATCH_SIZE = 20; // Images per batch
+
     /**
      * Initialize migration hooks
      */
     public static function init() {
-        add_action('admin_init', array(__CLASS__, 'maybe_run_migration'));
         add_action('admin_menu', array(__CLASS__, 'add_migration_page'));
+        add_action('wp_ajax_tbg_migrate_batch', array(__CLASS__, 'ajax_migrate_batch'));
+        add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_migration_scripts'));
+    }
+
+    /**
+     * Enqueue scripts for migration page
+     */
+    public static function enqueue_migration_scripts($hook) {
+        if ($hook !== 'tools_page_tbg-migration') {
+            return;
+        }
+
+        wp_enqueue_script(
+            'tbg-migration',
+            TBG_PLUGIN_URL . 'assets/js/migration.js',
+            array('jquery'),
+            TBG_VERSION,
+            true
+        );
+
+        wp_localize_script('tbg-migration', 'tbgMigration', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('tbg_migrate_nonce'),
+            'batchSize' => self::BATCH_SIZE,
+        ));
     }
 
     /**
@@ -47,18 +71,12 @@ class TBG_Migration {
         }
 
         $galleries = self::get_bwg_galleries();
-        $selected_page = isset($_GET['target_page']) ? intval($_GET['target_page']) : 0;
-        $migration_done = isset($_GET['migrated']) && $_GET['migrated'] === 'success';
 
         ?>
         <div class="wrap">
             <h1>Migrate Photo Gallery by 10Web to Trailblaze Gallery</h1>
 
-            <?php if ($migration_done) : ?>
-                <div class="notice notice-success">
-                    <p><strong>Migration completed successfully!</strong> The galleries have been imported to the selected page.</p>
-                </div>
-            <?php endif; ?>
+            <div id="tbg-migration-notices"></div>
 
             <?php if (empty($galleries)) : ?>
                 <div class="notice notice-warning">
@@ -90,9 +108,7 @@ class TBG_Migration {
                 </table>
 
                 <h2 style="margin-top: 30px;">Migrate to Page</h2>
-                <form method="post" action="">
-                    <?php wp_nonce_field('tbg_migrate_action', 'tbg_migrate_nonce'); ?>
-
+                <form id="tbg-migration-form">
                     <table class="form-table">
                         <tr>
                             <th scope="row">Target Page</th>
@@ -100,12 +116,12 @@ class TBG_Migration {
                                 <?php
                                 wp_dropdown_pages(array(
                                     'name' => 'target_page_id',
+                                    'id' => 'tbg-target-page',
                                     'show_option_none' => '-- Select a page --',
                                     'option_none_value' => '0',
-                                    'selected' => $selected_page,
                                 ));
                                 ?>
-                                <p class="description">Select the page where galleries will be added. The ACF field group will be populated with the imported data.</p>
+                                <p class="description">Select the page where galleries will be added.</p>
                             </td>
                         </tr>
                         <tr>
@@ -113,7 +129,9 @@ class TBG_Migration {
                             <td>
                                 <?php foreach ($galleries as $gallery) : ?>
                                     <label style="display: block; margin-bottom: 8px;">
-                                        <input type="checkbox" name="galleries[]" value="<?php echo esc_attr($gallery->id); ?>" checked>
+                                        <input type="checkbox" name="galleries[]" value="<?php echo esc_attr($gallery->id); ?>"
+                                               data-name="<?php echo esc_attr($gallery->name); ?>"
+                                               data-count="<?php echo esc_attr($gallery->image_count); ?>" checked>
                                         <?php echo esc_html($gallery->name); ?> (<?php echo esc_html($gallery->image_count); ?> images)
                                     </label>
                                 <?php endforeach; ?>
@@ -122,20 +140,30 @@ class TBG_Migration {
                     </table>
 
                     <p class="submit">
-                        <input type="submit" name="tbg_run_migration" class="button button-primary" value="Run Migration">
+                        <button type="submit" id="tbg-start-migration" class="button button-primary">Start Migration</button>
+                        <span id="tbg-migration-status" style="margin-left: 15px;"></span>
                     </p>
                 </form>
+
+                <!-- Progress UI -->
+                <div id="tbg-migration-progress" style="display: none; margin-top: 20px;">
+                    <h3>Migration Progress</h3>
+                    <div style="background: #f0f0f0; border-radius: 4px; padding: 3px; margin-bottom: 10px;">
+                        <div id="tbg-progress-bar" style="background: #2271b1; height: 24px; border-radius: 3px; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <p id="tbg-progress-text">Preparing...</p>
+                    <div id="tbg-progress-log" style="background: #f9f9f9; border: 1px solid #ddd; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+                </div>
 
             <?php endif; ?>
 
             <hr style="margin-top: 30px;">
 
-            <h2>Manual Shortcode Reference</h2>
-            <p>After migration, you can use these shortcodes:</p>
+            <h2>Shortcode Reference</h2>
+            <p>After migration, use these shortcodes in your page content:</p>
             <ul>
-                <li><code>[tbg_gallery id="gallery_id"]</code> - Display a specific gallery by its ID/anchor</li>
-                <li><code>[tbg_gallery gallery_index="0"]</code> - Display gallery by index (0 = first gallery)</li>
-                <li><code>[tbg_gallery post_id="123" gallery_index="0"]</code> - Display gallery from a specific page</li>
+                <li><code>[tbg_gallery id="gallery-slug"]</code> - Display a specific gallery by its ID</li>
+                <li><code>[tbg_gallery gallery_index="0"]</code> - Display gallery by index (0 = first)</li>
             </ul>
 
         </div>
@@ -143,37 +171,154 @@ class TBG_Migration {
     }
 
     /**
-     * Check if migration should run
+     * AJAX handler for batch migration
      */
-    public static function maybe_run_migration() {
+    public static function ajax_migrate_batch() {
+        check_ajax_referer('tbg_migrate_nonce', 'nonce');
+
         if (!current_user_can('manage_options')) {
-            return;
+            wp_send_json_error('Unauthorized');
         }
 
-        if (!isset($_POST['tbg_run_migration'])) {
-            return;
-        }
-
-        if (!isset($_POST['tbg_migrate_nonce']) || !wp_verify_nonce($_POST['tbg_migrate_nonce'], 'tbg_migrate_action')) {
-            wp_die('Security check failed');
-        }
-
+        $action_type = isset($_POST['action_type']) ? sanitize_text_field($_POST['action_type']) : '';
         $target_page_id = isset($_POST['target_page_id']) ? intval($_POST['target_page_id']) : 0;
-        $gallery_ids = isset($_POST['galleries']) ? array_map('intval', $_POST['galleries']) : array();
 
-        if (!$target_page_id || empty($gallery_ids)) {
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-error"><p>Please select a target page and at least one gallery.</p></div>';
-            });
-            return;
+        switch ($action_type) {
+            case 'prepare':
+                // Get list of all images to process
+                $gallery_ids = isset($_POST['gallery_ids']) ? array_map('intval', $_POST['gallery_ids']) : array();
+                $tasks = self::prepare_migration_tasks($gallery_ids);
+                wp_send_json_success(array(
+                    'tasks' => $tasks,
+                    'total' => count($tasks),
+                ));
+                break;
+
+            case 'process_batch':
+                // Process a batch of images for a gallery
+                $gallery_id = isset($_POST['gallery_id']) ? intval($_POST['gallery_id']) : 0;
+                $offset = isset($_POST['offset']) ? intval($_POST['offset']) : 0;
+                $result = self::process_image_batch($gallery_id, $offset, self::BATCH_SIZE);
+                wp_send_json_success($result);
+                break;
+
+            case 'finalize':
+                // Save all gallery data to ACF
+                $galleries_data = isset($_POST['galleries_data']) ? $_POST['galleries_data'] : array();
+                $result = self::finalize_migration($target_page_id, $galleries_data);
+                wp_send_json_success(array('success' => $result));
+                break;
+
+            default:
+                wp_send_json_error('Invalid action type');
+        }
+    }
+
+    /**
+     * Prepare list of migration tasks
+     */
+    public static function prepare_migration_tasks($gallery_ids) {
+        $tasks = array();
+
+        foreach ($gallery_ids as $gallery_id) {
+            $gallery = self::get_bwg_gallery_by_id($gallery_id);
+            if (!$gallery) continue;
+
+            $image_count = self::get_bwg_image_count($gallery_id);
+            $batches = ceil($image_count / self::BATCH_SIZE);
+
+            for ($i = 0; $i < $batches; $i++) {
+                $tasks[] = array(
+                    'gallery_id' => $gallery_id,
+                    'gallery_name' => $gallery->name,
+                    'gallery_slug' => $gallery->slug ?: sanitize_title($gallery->name),
+                    'offset' => $i * self::BATCH_SIZE,
+                    'batch' => $i + 1,
+                    'total_batches' => $batches,
+                );
+            }
         }
 
-        $result = self::run_migration($target_page_id, $gallery_ids);
+        return $tasks;
+    }
 
-        if ($result) {
-            wp_redirect(admin_url('tools.php?page=tbg-migration&migrated=success&target_page=' . $target_page_id));
-            exit;
+    /**
+     * Process a batch of images
+     */
+    public static function process_image_batch($gallery_id, $offset, $limit) {
+        global $wpdb;
+
+        $images_table = $wpdb->prefix . 'bwg_image';
+        $upload_dir = wp_upload_dir();
+        $bwg_base_url = $upload_dir['baseurl'] . '/photo-gallery';
+
+        $images = $wpdb->get_results($wpdb->prepare("
+            SELECT * FROM $images_table
+            WHERE gallery_id = %d AND published = 1
+            ORDER BY `order` ASC, id ASC
+            LIMIT %d OFFSET %d
+        ", $gallery_id, $limit, $offset));
+
+        $attachment_ids = array();
+        $processed = 0;
+        $errors = array();
+
+        foreach ($images as $image) {
+            $image_path = ltrim($image->image_url, '\\/');
+            $full_url = $bwg_base_url . '/' . str_replace('\\', '/', $image_path);
+
+            // Try to find existing attachment
+            $attachment_id = self::get_attachment_id_by_url($full_url);
+
+            if (!$attachment_id) {
+                // Try to import the image
+                $attachment_id = self::import_image_to_media_library($full_url, $image->alt);
+            }
+
+            if ($attachment_id) {
+                $attachment_ids[] = $attachment_id;
+            } else {
+                $errors[] = basename($image->image_url);
+            }
+
+            $processed++;
         }
+
+        return array(
+            'attachment_ids' => $attachment_ids,
+            'processed' => $processed,
+            'errors' => $errors,
+        );
+    }
+
+    /**
+     * Finalize migration - save to ACF
+     */
+    public static function finalize_migration($target_page_id, $galleries_data) {
+        if (!function_exists('update_field')) {
+            return false;
+        }
+
+        // Clean up the data structure
+        $clean_data = array();
+        foreach ($galleries_data as $gallery) {
+            if (!empty($gallery['image_ids'])) {
+                $clean_data[] = array(
+                    'gallery_title' => sanitize_text_field($gallery['name']),
+                    'gallery_id' => sanitize_title($gallery['slug']),
+                    'gallery_images' => array_map('intval', $gallery['image_ids']),
+                    'images_per_page' => 12,
+                    'columns' => '3',
+                );
+            }
+        }
+
+        if (!empty($clean_data)) {
+            update_field('tbg_galleries', $clean_data, $target_page_id);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -185,99 +330,30 @@ class TBG_Migration {
         $galleries_table = $wpdb->prefix . 'bwg_gallery';
         $images_table = $wpdb->prefix . 'bwg_image';
 
-        // Check if tables exist
         if ($wpdb->get_var("SHOW TABLES LIKE '$galleries_table'") !== $galleries_table) {
             return array();
         }
 
-        $query = "
+        return $wpdb->get_results("
             SELECT g.*, COUNT(i.id) as image_count
             FROM $galleries_table g
             LEFT JOIN $images_table i ON g.id = i.gallery_id AND i.published = 1
             WHERE g.published = 1
             GROUP BY g.id
             ORDER BY g.order ASC, g.id ASC
-        ";
-
-        return $wpdb->get_results($query);
+        ");
     }
 
     /**
-     * Get images for a BWG gallery
+     * Get image count for a gallery
      */
-    public static function get_bwg_images($gallery_id) {
+    public static function get_bwg_image_count($gallery_id) {
         global $wpdb;
-
-        $images_table = $wpdb->prefix . 'bwg_image';
-
-        $query = $wpdb->prepare("
-            SELECT * FROM $images_table
-            WHERE gallery_id = %d AND published = 1
-            ORDER BY `order` ASC, id ASC
-        ", $gallery_id);
-
-        return $wpdb->get_results($query);
-    }
-
-    /**
-     * Run the migration
-     */
-    public static function run_migration($target_page_id, $gallery_ids) {
-        if (!function_exists('update_field')) {
-            error_log('ACF not available for migration');
-            return false;
-        }
-
-        $galleries_data = array();
-        $upload_dir = wp_upload_dir();
-        $bwg_base_url = $upload_dir['baseurl'] . '/photo-gallery';
-
-        foreach ($gallery_ids as $gallery_id) {
-            $bwg_gallery = self::get_bwg_gallery_by_id($gallery_id);
-            if (!$bwg_gallery) continue;
-
-            $bwg_images = self::get_bwg_images($gallery_id);
-            if (empty($bwg_images)) continue;
-
-            // Find or import images to media library
-            $wp_image_ids = array();
-            foreach ($bwg_images as $bwg_image) {
-                $image_path = ltrim($bwg_image->image_url, '\\/');
-                $full_url = $bwg_base_url . '/' . str_replace('\\', '/', $image_path);
-
-                // Try to find existing attachment
-                $attachment_id = self::get_attachment_id_by_url($full_url);
-
-                if (!$attachment_id) {
-                    // Try to import the image
-                    $attachment_id = self::import_image_to_media_library($full_url, $bwg_image->alt);
-                }
-
-                if ($attachment_id) {
-                    $wp_image_ids[] = $attachment_id;
-                }
-            }
-
-            if (!empty($wp_image_ids)) {
-                // Generate a clean slug for the gallery ID
-                $slug = sanitize_title($bwg_gallery->slug ?: $bwg_gallery->name);
-
-                $galleries_data[] = array(
-                    'gallery_title' => $bwg_gallery->name,
-                    'gallery_id' => $slug,
-                    'gallery_images' => $wp_image_ids,
-                    'images_per_page' => 12,
-                    'columns' => '3',
-                );
-            }
-        }
-
-        if (!empty($galleries_data)) {
-            update_field('tbg_galleries', $galleries_data, $target_page_id);
-            return true;
-        }
-
-        return false;
+        $table = $wpdb->prefix . 'bwg_image';
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE gallery_id = %d AND published = 1",
+            $gallery_id
+        ));
     }
 
     /**
@@ -295,10 +371,8 @@ class TBG_Migration {
     public static function get_attachment_id_by_url($url) {
         global $wpdb;
 
-        // Normalize URL
-        $url = preg_replace('/\?.*/', '', $url); // Remove query strings
+        $url = preg_replace('/\?.*/', '', $url);
 
-        // Try direct lookup
         $attachment_id = $wpdb->get_var($wpdb->prepare(
             "SELECT ID FROM $wpdb->posts WHERE guid = %s",
             $url
@@ -308,7 +382,6 @@ class TBG_Migration {
             return intval($attachment_id);
         }
 
-        // Try by filename
         $filename = basename($url);
         $attachment_id = $wpdb->get_var($wpdb->prepare(
             "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_wp_attached_file' AND meta_value LIKE %s",
@@ -326,12 +399,10 @@ class TBG_Migration {
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         require_once(ABSPATH . 'wp-admin/includes/image.php');
 
-        // Convert URL to local path if possible
         $upload_dir = wp_upload_dir();
         $local_path = str_replace($upload_dir['baseurl'], $upload_dir['basedir'], $url);
 
         if (file_exists($local_path)) {
-            // File exists locally, create attachment from it
             $filename = basename($local_path);
             $filetype = wp_check_filetype($filename);
 
@@ -343,7 +414,6 @@ class TBG_Migration {
                 'post_status' => 'inherit'
             );
 
-            // Copy to standard uploads location
             $new_file = $upload_dir['path'] . '/' . $filename;
             if (!file_exists($new_file)) {
                 copy($local_path, $new_file);
